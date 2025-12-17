@@ -41,6 +41,7 @@ Select an action:
 1.  **Select Option 1 (Build OS Image)**: This will create a temporary VM, run `osimage.bash`, and create a GCP Image.
 2.  **Select Option 2 (Provision Infrastructure)**: This will create the VPC, Subnet, and VMs using the image created in step 1.
 3.  **Select Option 3 (Bootstrap Cluster)**: This will initialize the Control Plane, install Cilium, and join the worker nodes automatically.
+4.  **Select Option 4 (Validate Cluster)**: This will run a series of checks (Node status, Pod status, Cilium health, Connectivity) to ensure the cluster is healthy.
 
 ### 4. Verify
 SSH into the Control Plane (or use `kubectl` if you copied the config locally):

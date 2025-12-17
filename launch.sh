@@ -32,8 +32,9 @@ function show_menu() {
     echo "1) Build OS Image"
     echo "2) Provision Infrastructure"
     echo "3) Bootstrap Cluster"
-    echo "4) Destroy Cluster"
-    echo "5) Exit"
+    echo "4) Validate Cluster"
+    echo "5) Destroy Cluster"
+    echo "6) Exit"
 }
 
 function build_image() {
@@ -111,6 +112,11 @@ function bootstrap_cluster() {
     echo "Cluster bootstrapping complete."
 }
 
+function validate_cluster() {
+    echo "--- Validating Cluster ---"
+    bash validate_cluster.sh
+}
+
 function destroy_cluster() {
     echo "--- Destroying Cluster ---"
     read -p "Are you sure? This will delete VMs and Network. (y/N): " CONFIRM
@@ -137,13 +143,14 @@ function destroy_cluster() {
 # Main Loop
 while true; do
     show_menu
-    read -p "Enter choice [1-5]: " CHOICE
+    read -p "Enter choice [1-6]: " CHOICE
     case $CHOICE in
         1) build_image ;;
         2) provision_infra ;;
         3) bootstrap_cluster ;;
-        4) destroy_cluster ;;
-        5) exit 0 ;;
+        4) validate_cluster ;;
+        5) destroy_cluster ;;
+        6) exit 0 ;;
         *) echo "Invalid option." ;;
     esac
     echo ""
