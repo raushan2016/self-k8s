@@ -30,11 +30,13 @@ sudo kubeadm init \
   --pod-network-cidr=$POD_CIDR \
   --apiserver-advertise-address=$INTERNAL_IP \
   --kubernetes-version=$KUBERNETES_FULL_VERSION
+echo "[SUCCESS] Kubeadm initialized."
 
 echo "--- Configuring Kubectl for Root ---"
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
+echo "[SUCCESS] Kubectl configured."
 
 echo "--- Installing Cilium CLI ---"
 CILIUM_CLI_ARCH=amd64
@@ -43,12 +45,15 @@ curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/d
 sha256sum --check cilium-linux-${CILIUM_CLI_ARCH}.tar.gz.sha256sum
 sudo tar xzvfC cilium-linux-${CILIUM_CLI_ARCH}.tar.gz /usr/local/bin
 rm cilium-linux-${CILIUM_CLI_ARCH}.tar.gz{,.sha256sum}
+echo "[SUCCESS] Cilium CLI installed."
 
 echo "--- Installing Cilium CNI ---"
 cilium install --version $CILIUM_VERSION
+echo "[SUCCESS] Cilium CNI installed."
 
 echo "--- Waiting for Cilium to be ready ---"
 cilium status --wait
+echo "[SUCCESS] Cilium is ready."
 
 echo "--- Cluster Initialized ---"
 echo "To join worker nodes, run the following command on them:"

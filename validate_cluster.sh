@@ -22,7 +22,7 @@ echo "============================================================"
 
 # Helper function to run command on Control Plane
 function run_on_cp() {
-    gcloud compute ssh $CONTROL_PLANE_NAME --zone $ZONE --command "$1" --quiet
+    gcloud compute ssh $CONTROL_PLANE_NAME --zone $ZONE --command "$1"
 }
 
 echo "--- 1. Checking Node Status ---"

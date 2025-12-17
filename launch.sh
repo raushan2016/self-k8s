@@ -48,33 +48,36 @@ function build_image() {
         --zone $ZONE \
         --machine-type e2-standard-4 \
         --image-family $IMAGE_FAMILY \
-        --image-project $IMAGE_PROJECT \
-        --quiet
+        --image-project $IMAGE_PROJECT
+    echo "[SUCCESS] Temporary VM created."
 
     echo "Waiting for VM to be ready..."
     sleep 30
 
     echo "Uploading scripts..."
-    gcloud compute scp config.env osimage.bash $BUILD_VM:~/ --zone $ZONE --quiet
+    gcloud compute scp config.env osimage.bash $BUILD_VM:~/ --zone $ZONE
+    echo "[SUCCESS] Scripts uploaded."
 
     echo "Running build script..."
-    gcloud compute ssh $BUILD_VM --zone $ZONE --command "sudo bash osimage.bash" --quiet
+    gcloud compute ssh $BUILD_VM --zone $ZONE --command "sudo bash osimage.bash"
+    echo "[SUCCESS] Build script executed."
 
     echo "Creating Image: $CUSTOM_IMAGE_NAME..."
     if gcloud compute images describe $CUSTOM_IMAGE_NAME --project $PROJECT_ID &>/dev/null; then
         echo "Image $CUSTOM_IMAGE_NAME already exists. Deleting..."
-        gcloud compute images delete $CUSTOM_IMAGE_NAME --project $PROJECT_ID --quiet
+        gcloud compute images delete $CUSTOM_IMAGE_NAME --project $PROJECT_ID
     fi
     
     gcloud compute images create $CUSTOM_IMAGE_NAME \
         --source-disk $BUILD_VM \
         --source-disk-zone $ZONE \
         --family $CUSTOM_IMAGE_FAMILY \
-        --project $PROJECT_ID \
-        --quiet
+        --project $PROJECT_ID
+    echo "[SUCCESS] Image created: $CUSTOM_IMAGE_NAME"
 
     echo "Deleting temporary VM..."
-    gcloud compute instances delete $BUILD_VM --zone $ZONE --quiet
+    gcloud compute instances delete $BUILD_VM --zone $ZONE
+    echo "[SUCCESS] Temporary VM deleted."
     
     echo "Image build complete."
 }
@@ -82,20 +85,23 @@ function build_image() {
 function provision_infra() {
     echo "--- Provisioning Infrastructure ---"
     bash infra_setup.sh
+    echo "[SUCCESS] Infrastructure provisioning complete."
 }
 
 function bootstrap_cluster() {
     echo "--- Bootstrapping Cluster ---"
     
     echo "Uploading scripts to Control Plane ($CONTROL_PLANE_NAME)..."
-    gcloud compute scp config.env bootstrap_cp.sh $CONTROL_PLANE_NAME:~/ --zone $ZONE --quiet
+    gcloud compute scp config.env bootstrap_cp.sh $CONTROL_PLANE_NAME:~/ --zone $ZONE
+    echo "[SUCCESS] Scripts uploaded to Control Plane."
 
     echo "Running Control Plane bootstrap..."
-    gcloud compute ssh $CONTROL_PLANE_NAME --zone $ZONE --command "chmod +x bootstrap_cp.sh && ./bootstrap_cp.sh" --quiet
+    gcloud compute ssh $CONTROL_PLANE_NAME --zone $ZONE --command "chmod +x bootstrap_cp.sh && ./bootstrap_cp.sh"
+    echo "[SUCCESS] Control Plane bootstrapped."
 
     # Extract Join Command
     echo "Extracting Join Command..."
-    JOIN_CMD=$(gcloud compute ssh $CONTROL_PLANE_NAME --zone $ZONE --command "kubeadm token create --print-join-command" --quiet)
+    JOIN_CMD=$(gcloud compute ssh $CONTROL_PLANE_NAME --zone $ZONE --command "kubeadm token create --print-join-command")
     
     if [ -z "$JOIN_CMD" ]; then
         echo "Error: Failed to get join command."
@@ -108,7 +114,8 @@ function bootstrap_cluster() {
     for (( i=0; i<$WORKER_COUNT; i++ )); do
         WORKER="${WORKER_NAME_PREFIX}-${i}"
         echo "Joining Worker: $WORKER..."
-        gcloud compute ssh $WORKER --zone $ZONE --command "sudo $JOIN_CMD" --quiet
+        gcloud compute ssh $WORKER --zone $ZONE --command "sudo $JOIN_CMD"
+        echo "[SUCCESS] Worker $WORKER joined."
     done
     
     echo "Cluster bootstrapping complete."
@@ -128,16 +135,16 @@ function destroy_cluster() {
     fi
     
     echo "Deleting VMs..."
-    gcloud compute instances delete $CONTROL_PLANE_NAME --zone $ZONE --quiet || true
+    gcloud compute instances delete $CONTROL_PLANE_NAME --zone $ZONE || true
     for (( i=0; i<$WORKER_COUNT; i++ )); do
-        gcloud compute instances delete "${WORKER_NAME_PREFIX}-${i}" --zone $ZONE --quiet || true
+        gcloud compute instances delete "${WORKER_NAME_PREFIX}-${i}" --zone $ZONE || true
     done
     
     echo "Deleting Subnet..."
-    gcloud compute networks subnets delete $SUBNET_NAME --region $REGION --quiet || true
+    gcloud compute networks subnets delete $SUBNET_NAME --region $REGION || true
     
     echo "Deleting Network..."
-    gcloud compute networks delete $NETWORK_NAME --quiet || true
+    gcloud compute networks delete $NETWORK_NAME || true
     
     echo "Cluster destroyed."
 }

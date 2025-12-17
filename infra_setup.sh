@@ -46,6 +46,7 @@ echo "Region: $REGION | Zone: $ZONE"
 echo "--- Creating VPC Network ---"
 if ! gcloud compute networks describe $NETWORK_NAME &>/dev/null; then
     gcloud compute networks create $NETWORK_NAME --subnet-mode custom
+    echo "[SUCCESS] Network $NETWORK_NAME created."
 else
     echo "Network $NETWORK_NAME already exists."
 fi
@@ -56,6 +57,7 @@ if ! gcloud compute networks subnets describe $SUBNET_NAME --region $REGION &>/d
         --network $NETWORK_NAME \
         --region $REGION \
         --range $SUBNET_RANGE
+    echo "[SUCCESS] Subnet $SUBNET_NAME created."
 else
     echo "Subnet $SUBNET_NAME already exists."
 fi
@@ -67,6 +69,7 @@ if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-internal &>/de
         --network $NETWORK_NAME \
         --allow tcp,udp,icmp \
         --source-ranges $SUBNET_RANGE,$POD_CIDR
+    echo "[SUCCESS] Firewall rule ${NETWORK_NAME}-allow-internal created."
 fi
 
 # Allow SSH
@@ -75,6 +78,7 @@ if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-ssh &>/dev/nul
         --network $NETWORK_NAME \
         --allow tcp:22 \
         --source-ranges 0.0.0.0/0
+    echo "[SUCCESS] Firewall rule ${NETWORK_NAME}-allow-ssh created."
 fi
 
 # Allow K8s API (6443)
@@ -83,6 +87,7 @@ if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-k8s-api &>/dev
         --network $NETWORK_NAME \
         --allow tcp:6443 \
         --source-ranges 0.0.0.0/0
+    echo "[SUCCESS] Firewall rule ${NETWORK_NAME}-allow-k8s-api created."
 fi
 
 # ==============================================================================
@@ -114,6 +119,7 @@ if ! gcloud compute instances describe $CONTROL_PLANE_NAME --zone $ZONE &>/dev/n
         --scopes cloud-platform \
         $IMAGE_ARGS \
         --boot-disk-size $BOOT_DISK_SIZE
+    echo "[SUCCESS] Control Plane $CONTROL_PLANE_NAME created."
 else
     echo "Control Plane $CONTROL_PLANE_NAME already exists."
 fi
@@ -131,6 +137,7 @@ for (( i=0; i<$WORKER_COUNT; i++ )); do
             --scopes cloud-platform \
             $IMAGE_ARGS \
             --boot-disk-size $BOOT_DISK_SIZE
+        echo "[SUCCESS] Worker $NAME created."
     else
         echo "Worker $NAME already exists."
     fi
