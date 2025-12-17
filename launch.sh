@@ -39,7 +39,9 @@ function show_menu() {
 
 function build_image() {
     echo "--- Building OS Image ---"
-    BUILD_VM="build-vm-$(date +%s)"
+    # Use RESOURCE_PREFIX if defined, else default
+    PREFIX="${RESOURCE_PREFIX:-build}"
+    BUILD_VM="${PREFIX}-vm-$(date +%s)"
     
     echo "Creating temporary VM: $BUILD_VM..."
     gcloud compute instances create $BUILD_VM \
