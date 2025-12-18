@@ -49,7 +49,8 @@ function build_image() {
         --zone $ZONE \
         --machine-type e2-standard-4 \
         --image-family $IMAGE_FAMILY \
-        --image-project $IMAGE_PROJECT
+        --image-project $IMAGE_PROJECT \
+        --boot-disk-size $BUILD_DISK_SIZE
     echo "[SUCCESS] Temporary VM created."
 
     echo "Waiting for VM to be ready..."
