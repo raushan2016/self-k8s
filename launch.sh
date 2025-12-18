@@ -156,16 +156,16 @@ function destroy_cluster() {
     fi
     
     echo "Deleting VMs..."
-    gcloud compute instances delete $CONTROL_PLANE_NAME --project $PROJECT_ID --zone $ZONE || true
+    gcloud compute instances delete $CONTROL_PLANE_NAME --project $PROJECT_ID --zone $ZONE --quiet || true
     for (( i=0; i<$WORKER_COUNT; i++ )); do
-        gcloud compute instances delete "${WORKER_NAME_PREFIX}-${i}" --project $PROJECT_ID --zone $ZONE || true
+        gcloud compute instances delete "${WORKER_NAME_PREFIX}-${i}" --project $PROJECT_ID --zone $ZONE --quiet || true
     done
     
     echo "Deleting Subnet..."
-    gcloud compute networks subnets delete $SUBNET_NAME --project $PROJECT_ID --region $REGION || true
+    gcloud compute networks subnets delete $SUBNET_NAME --project $PROJECT_ID --region $REGION --quiet || true
     
     echo "Deleting Network..."
-    gcloud compute networks delete $NETWORK_NAME --project $PROJECT_ID || true
+    gcloud compute networks delete $NETWORK_NAME --project $PROJECT_ID --quiet || true
     
     echo "Cluster destroyed."
 }
