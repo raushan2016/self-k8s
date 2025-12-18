@@ -41,7 +41,7 @@ function build_image() {
     echo "--- Building OS Image ---"
     # Use RESOURCE_PREFIX if defined, else default
     PREFIX="${RESOURCE_PREFIX:-build}"
-    BUILD_VM="${PREFIX}-vm"
+    BUILD_VM="${PREFIX}-vm-$(date +%s)"
     #BUILD_VM="${PREFIX}-vm-$(date +%s)"
     
     echo "Checking if temporary VM $BUILD_VM exists..."
@@ -51,11 +51,18 @@ function build_image() {
         echo "Skipping creation."
     else
         echo "Creating temporary VM: $BUILD_VM..."
+        # Determine image source
+        if [ -n "$IMAGE_NAME" ]; then
+            IMAGE_ARGS="--image $IMAGE_NAME"
+        else
+            IMAGE_ARGS="--image-family $IMAGE_FAMILY"
+        fi
+
         gcloud compute instances create $BUILD_VM \
             --project $PROJECT_ID \
             --zone $ZONE \
             --machine-type e2-standard-16 \
-            --image-family $IMAGE_FAMILY \
+            $IMAGE_ARGS \
             --image-project $IMAGE_PROJECT \
             --boot-disk-size $BUILD_DISK_SIZE
         echo "[SUCCESS] Temporary VM created."
