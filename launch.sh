@@ -161,6 +161,11 @@ function destroy_cluster() {
         gcloud compute instances delete "${WORKER_NAME_PREFIX}-${i}" --project $PROJECT_ID --zone $ZONE --quiet || true
     done
     
+    echo "Deleting Firewall Rules..."
+    gcloud compute firewall-rules delete ${NETWORK_NAME}-allow-internal --project $PROJECT_ID --quiet || true
+    gcloud compute firewall-rules delete ${NETWORK_NAME}-allow-ssh --project $PROJECT_ID --quiet || true
+    gcloud compute firewall-rules delete ${NETWORK_NAME}-allow-k8s-api --project $PROJECT_ID --quiet || true
+
     echo "Deleting Subnet..."
     gcloud compute networks subnets delete $SUBNET_NAME --project $PROJECT_ID --region $REGION --quiet || true
     
