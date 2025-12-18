@@ -44,16 +44,17 @@ echo "Region: $REGION | Zone: $ZONE"
 # NETWORK SETUP
 # ==============================================================================
 echo "--- Creating VPC Network ---"
-if ! gcloud compute networks describe $NETWORK_NAME &>/dev/null; then
-    gcloud compute networks create $NETWORK_NAME --subnet-mode custom
+if ! gcloud compute networks describe $NETWORK_NAME --project $PROJECT_ID &>/dev/null; then
+    gcloud compute networks create $NETWORK_NAME --project $PROJECT_ID --subnet-mode custom
     echo "[SUCCESS] Network $NETWORK_NAME created."
 else
     echo "Network $NETWORK_NAME already exists."
 fi
 
 echo "--- Creating Subnet ---"
-if ! gcloud compute networks subnets describe $SUBNET_NAME --region $REGION &>/dev/null; then
+if ! gcloud compute networks subnets describe $SUBNET_NAME --project $PROJECT_ID --region $REGION &>/dev/null; then
     gcloud compute networks subnets create $SUBNET_NAME \
+        --project $PROJECT_ID \
         --network $NETWORK_NAME \
         --region $REGION \
         --range $SUBNET_RANGE
@@ -64,8 +65,9 @@ fi
 
 echo "--- Creating Firewall Rules ---"
 # Allow internal communication
-if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-internal &>/dev/null; then
+if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-internal --project $PROJECT_ID &>/dev/null; then
     gcloud compute firewall-rules create ${NETWORK_NAME}-allow-internal \
+        --project $PROJECT_ID \
         --network $NETWORK_NAME \
         --allow tcp,udp,icmp \
         --source-ranges $SUBNET_RANGE,$POD_CIDR
@@ -73,8 +75,9 @@ if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-internal &>/de
 fi
 
 # Allow SSH
-if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-ssh &>/dev/null; then
+if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-ssh --project $PROJECT_ID &>/dev/null; then
     gcloud compute firewall-rules create ${NETWORK_NAME}-allow-ssh \
+        --project $PROJECT_ID \
         --network $NETWORK_NAME \
         --allow tcp:22 \
         --source-ranges 0.0.0.0/0
@@ -82,8 +85,9 @@ if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-ssh &>/dev/nul
 fi
 
 # Allow K8s API (6443)
-if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-k8s-api &>/dev/null; then
+if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-k8s-api --project $PROJECT_ID &>/dev/null; then
     gcloud compute firewall-rules create ${NETWORK_NAME}-allow-k8s-api \
+        --project $PROJECT_ID \
         --network $NETWORK_NAME \
         --allow tcp:6443 \
         --source-ranges 0.0.0.0/0
@@ -109,8 +113,9 @@ else
 fi
 
 echo "--- Creating Control Plane Instance ---"
-if ! gcloud compute instances describe $CONTROL_PLANE_NAME --zone $ZONE &>/dev/null; then
+if ! gcloud compute instances describe $CONTROL_PLANE_NAME --project $PROJECT_ID --zone $ZONE &>/dev/null; then
     gcloud compute instances create $CONTROL_PLANE_NAME \
+        --project $PROJECT_ID \
         --zone $ZONE \
         --machine-type $MACHINE_TYPE \
         --network $NETWORK_NAME \
@@ -127,8 +132,9 @@ fi
 echo "--- Creating Worker Instances ---"
 for (( i=0; i<$WORKER_COUNT; i++ )); do
     NAME="${WORKER_NAME_PREFIX}-${i}"
-    if ! gcloud compute instances describe $NAME --zone $ZONE &>/dev/null; then
+    if ! gcloud compute instances describe $NAME --project $PROJECT_ID --zone $ZONE &>/dev/null; then
         gcloud compute instances create $NAME \
+            --project $PROJECT_ID \
             --zone $ZONE \
             --machine-type $MACHINE_TYPE \
             --network $NETWORK_NAME \
