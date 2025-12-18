@@ -52,8 +52,7 @@ apt-get install -y \
   cuda-toolkit-13-0 \
   nvidia-container-toolkit \
   datacenter-gpu-manager-4-cuda13 \
-  datacenter-gpu-manager-4-dev \
-  cuda-drivers-fabricmanager-535
+  datacenter-gpu-manager-4-dev 
 
 # 3. Install NCCL (NVIDIA Collective Communications Library)
 apt-get install -y libnccl2 libnccl-dev

@@ -79,6 +79,10 @@ function build_image() {
     gcloud compute ssh $BUILD_VM --project $PROJECT_ID --zone $ZONE --command "sudo bash osimage.bash"
     echo "[SUCCESS] Build script executed."
 
+    echo "Stopping temporary VM to release disk..."
+    gcloud compute instances stop $BUILD_VM --project $PROJECT_ID --zone $ZONE
+    echo "[SUCCESS] Temporary VM stopped."
+
     echo "Creating Image: $CUSTOM_IMAGE_NAME..."
     if gcloud compute images describe $CUSTOM_IMAGE_NAME --project $PROJECT_ID &>/dev/null; then
         echo "Image $CUSTOM_IMAGE_NAME already exists. Deleting..."
