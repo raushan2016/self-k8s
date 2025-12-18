@@ -157,7 +157,7 @@ sysctl --system
 if ! command -v containerd &> /dev/null; then
     echo "Installing Containerd..."
     apt-get update
-    apt-get install -y containerd
+    apt-get install -y containerd conntrack socat
 fi
 
 # 4. Configure Containerd
@@ -194,6 +194,7 @@ mkdir -p /opt/cni/bin
 curl -L "https://github.com/containernetworking/plugins/releases/download/${CNI_VER}/cni-plugins-linux-${ARCH}-${CNI_VER}.tgz" \
   -o cni-plugins.tgz
 tar -xzvf cni-plugins.tgz -C /opt/cni/bin
+chown -R root:root /opt/cni/bin
 rm -f cni-plugins.tgz
 
 # ==============================================================================
