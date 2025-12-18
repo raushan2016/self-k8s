@@ -41,20 +41,28 @@ function build_image() {
     echo "--- Building OS Image ---"
     # Use RESOURCE_PREFIX if defined, else default
     PREFIX="${RESOURCE_PREFIX:-build}"
-    BUILD_VM="${PREFIX}-vm-$(date +%s)"
+    BUILD_VM="${PREFIX}-vm"
+    #BUILD_VM="${PREFIX}-vm-$(date +%s)"
     
-    echo "Creating temporary VM: $BUILD_VM..."
-    gcloud compute instances create $BUILD_VM \
-        --project $PROJECT_ID \
-        --zone $ZONE \
-        --machine-type e2-standard-4 \
-        --image-family $IMAGE_FAMILY \
-        --image-project $IMAGE_PROJECT \
-        --boot-disk-size $BUILD_DISK_SIZE
-    echo "[SUCCESS] Temporary VM created."
+    echo "Checking if temporary VM $BUILD_VM exists..."
+    if gcloud compute instances describe $BUILD_VM --project $PROJECT_ID --zone $ZONE &>/dev/null; then
+        echo "VM $BUILD_VM already exists. Ensuring it is running..."
+        gcloud compute instances start $BUILD_VM --project $PROJECT_ID --zone $ZONE || true
+        echo "Skipping creation."
+    else
+        echo "Creating temporary VM: $BUILD_VM..."
+        gcloud compute instances create $BUILD_VM \
+            --project $PROJECT_ID \
+            --zone $ZONE \
+            --machine-type e2-standard-4 \
+            --image-family $IMAGE_FAMILY \
+            --image-project $IMAGE_PROJECT \
+            --boot-disk-size $BUILD_DISK_SIZE
+        echo "[SUCCESS] Temporary VM created."
 
-    echo "Waiting for VM to be ready..."
-    sleep 30
+        echo "Waiting for VM to be ready..."
+        sleep 30
+    fi
 
     echo "Uploading scripts..."
     gcloud compute scp config.env osimage.bash $BUILD_VM:~/ --project $PROJECT_ID --zone $ZONE

@@ -51,12 +51,13 @@ apt-get install -y \
   cuda-toolkit-13-0 \
   nvidia-container-toolkit \
   datacenter-gpu-manager-4-cuda13 \
-  datacenter-gpu-manager-4-dev
+  datacenter-gpu-manager-4-dev \
+  cuda-drivers-fabricmanager-535
 
 # 3. Install NCCL (NVIDIA Collective Communications Library)
 apt-get install -y libnccl2 libnccl-dev
 
-rm cuda-keyring_1.1-1_all.deb
+rm -f cuda-keyring_1.1-1_all.deb
 
 # 4. Fabric Manager Configuration
 systemctl enable nvidia-fabricmanager
@@ -171,7 +172,7 @@ K8S_VER="${KUBERNETES_VERSION:-v1.29}"
 apt-get install -y apt-transport-https ca-certificates curl gpg
 
 # Download public signing key
-curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_VER}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_VER}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg --yes
 
 # Add repository
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_VER}/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
@@ -187,7 +188,7 @@ mkdir -p /opt/cni/bin
 curl -L "https://github.com/containernetworking/plugins/releases/download/${CNI_VER}/cni-plugins-linux-${ARCH}-${CNI_VER}.tgz" \
   -o cni-plugins.tgz
 tar -xzvf cni-plugins.tgz -C /opt/cni/bin
-rm cni-plugins.tgz
+rm -f cni-plugins.tgz
 
 # ==============================================================================
 # LAYER 5: OPENMPI & TOOLS
@@ -203,7 +204,7 @@ echo "--- Installing & Configuring Ops Agent ---"
 
 curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
 bash add-google-cloud-ops-agent-repo.sh --also-install --version=latest
-rm add-google-cloud-ops-agent-repo.sh
+rm -f add-google-cloud-ops-agent-repo.sh
 
 mkdir -p /etc/google-cloud-ops-agent
 cat <<EOF > /etc/google-cloud-ops-agent/config.yaml
