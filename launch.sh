@@ -54,7 +54,7 @@ function build_image() {
         gcloud compute instances create $BUILD_VM \
             --project $PROJECT_ID \
             --zone $ZONE \
-            --machine-type e2-standard-4 \
+            --machine-type e2-standard-16 \
             --image-family $IMAGE_FAMILY \
             --image-project $IMAGE_PROJECT \
             --boot-disk-size $BUILD_DISK_SIZE

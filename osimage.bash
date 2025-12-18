@@ -12,8 +12,20 @@ fi
 echo "--- Layer 1: Applying Hardware Stability Locks ---"
 
 # Preventing package managers from updating GPU drivers/firmware mid-run
-# Preventing package managers from updating GPU drivers/firmware mid-run
-# NVIDIA packages will be held AFTER installation in Layer 2
+NVIDIA_PACKAGES=(
+  "libnvidia-cfg1-*-server"
+  "libnvidia-compute-*-server"
+  "libnvidia-nscq-*"
+  "nvidia-compute-utils-*-server"
+  "nvidia-fabricmanager-*"
+  "nvidia-utils-*-server"
+  "nvidia-imex-*"
+)
+
+for pkg in "${NVIDIA_PACKAGES[@]}"; do
+  apt-mark hold "$pkg" || echo "Warning: Could not hold $pkg (might not be installed yet)"
+done
+
 
 GOOGLE_COMPUTE_PACKAGES=(
   "google-compute-engine"
@@ -34,23 +46,6 @@ echo "--- Layer 2: Installing GPU Runtime, NCCL, and Toolkits ---"
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
 dpkg -i cuda-keyring_1.1-1_all.deb
 apt-get update
-
-# Define NVIDIA packages to manage
-NVIDIA_PACKAGES=(
-  "libnvidia-cfg1-*-server"
-  "libnvidia-compute-*-server"
-  "libnvidia-nscq-*"
-  "nvidia-compute-utils-*-server"
-  "nvidia-fabricmanager-*"
-  "nvidia-utils-*-server"
-  "nvidia-imex-*"
-)
-
-# Unhold packages before install (crucial for retries)
-echo "Unholding NVIDIA packages to allow installation..."
-for pkg in "${NVIDIA_PACKAGES[@]}"; do
-  apt-mark unhold "$pkg" || true
-done
 
 # 2. Install CUDA Toolkit, Container Toolkit, and DCGM
 apt-get install -y \
