@@ -2,7 +2,7 @@
 set -e -o pipefail
 
 # Source configuration if available
-if [ -f "config.env" ]; then
+if [[ -f "config.env" ]]; then
     source config.env
 fi
 
@@ -178,7 +178,7 @@ K8S_VER="${KUBERNETES_VERSION:-v1.29}"
 apt-get install -y apt-transport-https ca-certificates curl gpg
 
 # Download public signing key
-curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_VER}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg --yes
+curl -fsSL "https://pkgs.k8s.io/core:/stable:/${K8S_VER}/deb/Release.key" | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg --yes
 
 # Add repository
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_VER}/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
@@ -248,7 +248,7 @@ echo "--- Final Cleanup: Removing Snap and Installing GCloud via APT ---"
 snap remove google-cloud-cli lxd || true
 
 GCLOUD_APT_SOURCE="/etc/apt/sources.list.d/google-cloud-sdk.list"
-if [ ! -f "${GCLOUD_APT_SOURCE}" ]; then
+if [[ ! -f "${GCLOUD_APT_SOURCE}" ]]; then
     cat <<EOF > "${GCLOUD_APT_SOURCE}"
 deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt cloud-sdk main
 EOF

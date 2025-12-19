@@ -5,7 +5,7 @@ set -e -o pipefail
 # CONFIGURATION
 # ==============================================================================
 # Source configuration
-if [ -f "config.env" ]; then
+if [[ -f "config.env" ]]; then
     source config.env
 else
     echo "Error: config.env not found."
@@ -25,8 +25,8 @@ IMAGE_FAMILY="${IMAGE_FAMILY:-ubuntu-2204-lts}"
 IMAGE_PROJECT="${IMAGE_PROJECT:-ubuntu-os-cloud}"
 
 # Construct Image Name
-if [ -n "$CUSTOM_IMAGE_NAME" ]; then
-    IMAGE_NAME="projects/$PROJECT_ID/global/images/$CUSTOM_IMAGE_NAME"
+if [[ -n "${CUSTOM_IMAGE_NAME}" ]]; then
+    IMAGE_NAME="projects/${PROJECT_ID}/global/images/${CUSTOM_IMAGE_NAME}"
 else
     IMAGE_NAME=""
 fi
@@ -37,58 +37,58 @@ WORKER_COUNT="${WORKER_COUNT:-2}"
 MACHINE_TYPE="${MACHINE_TYPE:-e2-standard-4}"
 BOOT_DISK_SIZE="${BOOT_DISK_SIZE:-50GB}"
 
-echo "Using Project: $PROJECT_ID"
-echo "Region: $REGION | Zone: $ZONE"
+echo "Using Project: ${PROJECT_ID}"
+echo "Region: ${REGION} | Zone: ${ZONE}"
 
 # ==============================================================================
 # NETWORK SETUP
 # ==============================================================================
 echo "--- Creating VPC Network ---"
-if ! gcloud compute networks describe $NETWORK_NAME --project $PROJECT_ID &>/dev/null; then
-    gcloud compute networks create $NETWORK_NAME --project $PROJECT_ID --subnet-mode custom
-    echo "[SUCCESS] Network $NETWORK_NAME created."
+if ! gcloud compute networks describe "${NETWORK_NAME}" --project "${PROJECT_ID}" &>/dev/null; then
+    gcloud compute networks create "${NETWORK_NAME}" --project "${PROJECT_ID}" --subnet-mode custom
+    echo "[SUCCESS] Network ${NETWORK_NAME} created."
 else
-    echo "Network $NETWORK_NAME already exists."
+    echo "Network ${NETWORK_NAME} already exists."
 fi
 
 echo "--- Creating Subnet ---"
-if ! gcloud compute networks subnets describe $SUBNET_NAME --project $PROJECT_ID --region $REGION &>/dev/null; then
-    gcloud compute networks subnets create $SUBNET_NAME \
-        --project $PROJECT_ID \
-        --network $NETWORK_NAME \
-        --region $REGION \
-        --range $SUBNET_RANGE
-    echo "[SUCCESS] Subnet $SUBNET_NAME created."
+if ! gcloud compute networks subnets describe "${SUBNET_NAME}" --project "${PROJECT_ID}" --region "${REGION}" &>/dev/null; then
+    gcloud compute networks subnets create "${SUBNET_NAME}" \
+        --project "${PROJECT_ID}" \
+        --network "${NETWORK_NAME}" \
+        --region "${REGION}" \
+        --range "${SUBNET_RANGE}"
+    echo "[SUCCESS] Subnet ${SUBNET_NAME} created."
 else
-    echo "Subnet $SUBNET_NAME already exists."
+    echo "Subnet ${SUBNET_NAME} already exists."
 fi
 
 echo "--- Creating Firewall Rules ---"
 # Allow internal communication
-if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-internal --project $PROJECT_ID &>/dev/null; then
-    gcloud compute firewall-rules create ${NETWORK_NAME}-allow-internal \
-        --project $PROJECT_ID \
-        --network $NETWORK_NAME \
+if ! gcloud compute firewall-rules describe "${NETWORK_NAME}-allow-internal" --project "${PROJECT_ID}" &>/dev/null; then
+    gcloud compute firewall-rules create "${NETWORK_NAME}-allow-internal" \
+        --project "${PROJECT_ID}" \
+        --network "${NETWORK_NAME}" \
         --allow tcp,udp,icmp \
-        --source-ranges $SUBNET_RANGE,$POD_CIDR
+        --source-ranges "${SUBNET_RANGE},${POD_CIDR}"
     echo "[SUCCESS] Firewall rule ${NETWORK_NAME}-allow-internal created."
 fi
 
 # Allow SSH
-if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-ssh --project $PROJECT_ID &>/dev/null; then
-    gcloud compute firewall-rules create ${NETWORK_NAME}-allow-ssh \
-        --project $PROJECT_ID \
-        --network $NETWORK_NAME \
+if ! gcloud compute firewall-rules describe "${NETWORK_NAME}-allow-ssh" --project "${PROJECT_ID}" &>/dev/null; then
+    gcloud compute firewall-rules create "${NETWORK_NAME}-allow-ssh" \
+        --project "${PROJECT_ID}" \
+        --network "${NETWORK_NAME}" \
         --allow tcp:22 \
         --source-ranges 0.0.0.0/0
     echo "[SUCCESS] Firewall rule ${NETWORK_NAME}-allow-ssh created."
 fi
 
 # Allow K8s API (6443)
-if ! gcloud compute firewall-rules describe ${NETWORK_NAME}-allow-k8s-api --project $PROJECT_ID &>/dev/null; then
-    gcloud compute firewall-rules create ${NETWORK_NAME}-allow-k8s-api \
-        --project $PROJECT_ID \
-        --network $NETWORK_NAME \
+if ! gcloud compute firewall-rules describe "${NETWORK_NAME}-allow-k8s-api" --project "${PROJECT_ID}" &>/dev/null; then
+    gcloud compute firewall-rules create "${NETWORK_NAME}-allow-k8s-api" \
+        --project "${PROJECT_ID}" \
+        --network "${NETWORK_NAME}" \
         --allow tcp:6443 \
         --source-ranges 0.0.0.0/0
     echo "[SUCCESS] Firewall rule ${NETWORK_NAME}-allow-k8s-api created."
@@ -99,53 +99,53 @@ fi
 # ==============================================================================
 
 # Check if custom image is provided, else warn
-if [ -z "$IMAGE_NAME" ]; then
+if [[ -z "${IMAGE_NAME}" ]]; then
     echo "WARNING: CUSTOM_IMAGE_NAME is not set in config.env. Using default Ubuntu image."
-    IMAGE_ARGS="--image-family=$IMAGE_FAMILY --image-project=$IMAGE_PROJECT"
+    IMAGE_ARGS=("--image-family=${IMAGE_FAMILY}" "--image-project=${IMAGE_PROJECT}")
 else
     # Verify image exists
-    if ! gcloud compute images describe $CUSTOM_IMAGE_NAME --project $PROJECT_ID &>/dev/null; then
-         echo "WARNING: Custom image $CUSTOM_IMAGE_NAME not found in project $PROJECT_ID. Falling back to default Ubuntu."
-         IMAGE_ARGS="--image-family=$IMAGE_FAMILY --image-project=$IMAGE_PROJECT"
+    if ! gcloud compute images describe "${CUSTOM_IMAGE_NAME}" --project "${PROJECT_ID}" &>/dev/null; then
+         echo "WARNING: Custom image ${CUSTOM_IMAGE_NAME} not found in project ${PROJECT_ID}. Falling back to default Ubuntu."
+         IMAGE_ARGS=("--image-family=${IMAGE_FAMILY}" "--image-project=${IMAGE_PROJECT}")
     else
-         IMAGE_ARGS="--image=$IMAGE_NAME"
+         IMAGE_ARGS=("--image=${IMAGE_NAME}")
     fi
 fi
 
 echo "--- Creating Control Plane Instance ---"
-if ! gcloud compute instances describe $CONTROL_PLANE_NAME --project $PROJECT_ID --zone $ZONE &>/dev/null; then
-    gcloud compute instances create $CONTROL_PLANE_NAME \
-        --project $PROJECT_ID \
-        --zone $ZONE \
-        --machine-type $MACHINE_TYPE \
-        --network $NETWORK_NAME \
-        --subnet $SUBNET_NAME \
+if ! gcloud compute instances describe "${CONTROL_PLANE_NAME}" --project "${PROJECT_ID}" --zone "${ZONE}" &>/dev/null; then
+    gcloud compute instances create "${CONTROL_PLANE_NAME}" \
+        --project "${PROJECT_ID}" \
+        --zone "${ZONE}" \
+        --machine-type "${MACHINE_TYPE}" \
+        --network "${NETWORK_NAME}" \
+        --subnet "${SUBNET_NAME}" \
         --tags k8s-control-plane \
         --scopes cloud-platform \
-        $IMAGE_ARGS \
-        --boot-disk-size $BOOT_DISK_SIZE
-    echo "[SUCCESS] Control Plane $CONTROL_PLANE_NAME created."
+        "${IMAGE_ARGS[@]}" \
+        --boot-disk-size "${BOOT_DISK_SIZE}"
+    echo "[SUCCESS] Control Plane ${CONTROL_PLANE_NAME} created."
 else
-    echo "Control Plane $CONTROL_PLANE_NAME already exists."
+    echo "Control Plane ${CONTROL_PLANE_NAME} already exists."
 fi
 
 echo "--- Creating Worker Instances ---"
-for (( i=0; i<$WORKER_COUNT; i++ )); do
+for (( i=0; i<${WORKER_COUNT}; i++ )); do
     NAME="${WORKER_NAME_PREFIX}-${i}"
-    if ! gcloud compute instances describe $NAME --project $PROJECT_ID --zone $ZONE &>/dev/null; then
-        gcloud compute instances create $NAME \
-            --project $PROJECT_ID \
-            --zone $ZONE \
-            --machine-type $MACHINE_TYPE \
-            --network $NETWORK_NAME \
-            --subnet $SUBNET_NAME \
+    if ! gcloud compute instances describe "${NAME}" --project "${PROJECT_ID}" --zone "${ZONE}" &>/dev/null; then
+        gcloud compute instances create "${NAME}" \
+            --project "${PROJECT_ID}" \
+            --zone "${ZONE}" \
+            --machine-type "${MACHINE_TYPE}" \
+            --network "${NETWORK_NAME}" \
+            --subnet "${SUBNET_NAME}" \
             --tags k8s-worker \
             --scopes cloud-platform \
-            $IMAGE_ARGS \
-            --boot-disk-size $BOOT_DISK_SIZE
-        echo "[SUCCESS] Worker $NAME created."
+            "${IMAGE_ARGS[@]}" \
+            --boot-disk-size "${BOOT_DISK_SIZE}"
+        echo "[SUCCESS] Worker ${NAME} created."
     else
-        echo "Worker $NAME already exists."
+        echo "Worker ${NAME} already exists."
     fi
 done
 

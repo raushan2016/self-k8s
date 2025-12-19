@@ -4,7 +4,7 @@ set -e -o pipefail
 # ==============================================================================
 # CONFIGURATION
 # ==============================================================================
-if [ -f "config.env" ]; then
+if [[ -f "config.env" ]]; then
     source config.env
 else
     echo "Error: config.env not found."
@@ -24,7 +24,7 @@ IMAGE_PROJECT="${IMAGE_PROJECT:-ubuntu-os-cloud}"
 
 echo "============================================================"
 echo "Self-Hosted Kubernetes Launcher"
-echo "Project: $PROJECT_ID | Zone: $ZONE"
+echo "Project: ${PROJECT_ID} | Zone: ${ZONE}"
 echo "============================================================"
 
 function show_menu() {
@@ -44,27 +44,27 @@ function build_image() {
     BUILD_VM="${PREFIX}-vm-$(date +%s)"
     #BUILD_VM="${PREFIX}-vm-$(date +%s)"
     
-    echo "Checking if temporary VM $BUILD_VM exists..."
-    if gcloud compute instances describe $BUILD_VM --project $PROJECT_ID --zone $ZONE &>/dev/null; then
-        echo "VM $BUILD_VM already exists. Ensuring it is running..."
-        gcloud compute instances start $BUILD_VM --project $PROJECT_ID --zone $ZONE || true
+    echo "Checking if temporary VM ${BUILD_VM} exists..."
+    if gcloud compute instances describe "${BUILD_VM}" --project "${PROJECT_ID}" --zone "${ZONE}" &>/dev/null; then
+        echo "VM ${BUILD_VM} already exists. Ensuring it is running..."
+        gcloud compute instances start "${BUILD_VM}" --project "${PROJECT_ID}" --zone "${ZONE}" || true
         echo "Skipping creation."
     else
-        echo "Creating temporary VM: $BUILD_VM..."
+        echo "Creating temporary VM: ${BUILD_VM}..."
         # Determine image source
-        if [ -n "$IMAGE_NAME" ]; then
-            IMAGE_ARGS="--image $IMAGE_NAME"
+        if [[ -n "${IMAGE_NAME}" ]]; then
+            IMAGE_ARGS=("--image" "${IMAGE_NAME}")
         else
-            IMAGE_ARGS="--image-family $IMAGE_FAMILY"
+            IMAGE_ARGS=("--image-family" "${IMAGE_FAMILY}")
         fi
 
-        gcloud compute instances create $BUILD_VM \
-            --project $PROJECT_ID \
-            --zone $ZONE \
+        gcloud compute instances create "${BUILD_VM}" \
+            --project "${PROJECT_ID}" \
+            --zone "${ZONE}" \
             --machine-type e2-standard-16 \
-            $IMAGE_ARGS \
-            --image-project $IMAGE_PROJECT \
-            --boot-disk-size $BUILD_DISK_SIZE
+            "${IMAGE_ARGS[@]}" \
+            --image-project "${IMAGE_PROJECT}" \
+            --boot-disk-size "${BUILD_DISK_SIZE}"
         echo "[SUCCESS] Temporary VM created."
 
         echo "Waiting for VM to be ready..."
@@ -72,32 +72,32 @@ function build_image() {
     fi
 
     echo "Uploading scripts..."
-    gcloud compute scp config.env osimage.bash $BUILD_VM:~/ --project $PROJECT_ID --zone $ZONE
+    gcloud compute scp config.env osimage.bash "${BUILD_VM}:~/" --project "${PROJECT_ID}" --zone "${ZONE}"
     echo "[SUCCESS] Scripts uploaded."
 
     echo "Running build script..."
-    gcloud compute ssh $BUILD_VM --project $PROJECT_ID --zone $ZONE --command "sudo bash osimage.bash"
+    gcloud compute ssh "${BUILD_VM}" --project "${PROJECT_ID}" --zone "${ZONE}" --command "sudo bash osimage.bash"
     echo "[SUCCESS] Build script executed."
 
     echo "Stopping temporary VM to release disk..."
-    gcloud compute instances stop $BUILD_VM --project $PROJECT_ID --zone $ZONE
+    gcloud compute instances stop "${BUILD_VM}" --project "${PROJECT_ID}" --zone "${ZONE}"
     echo "[SUCCESS] Temporary VM stopped."
 
-    echo "Creating Image: $CUSTOM_IMAGE_NAME..."
-    if gcloud compute images describe $CUSTOM_IMAGE_NAME --project $PROJECT_ID &>/dev/null; then
-        echo "Image $CUSTOM_IMAGE_NAME already exists. Deleting..."
-        gcloud compute images delete $CUSTOM_IMAGE_NAME --project $PROJECT_ID
+    echo "Creating Image: ${CUSTOM_IMAGE_NAME}..."
+    if gcloud compute images describe "${CUSTOM_IMAGE_NAME}" --project "${PROJECT_ID}" &>/dev/null; then
+        echo "Image ${CUSTOM_IMAGE_NAME} already exists. Deleting..."
+        gcloud compute images delete "${CUSTOM_IMAGE_NAME}" --project "${PROJECT_ID}" --quiet
     fi
     
-    gcloud compute images create $CUSTOM_IMAGE_NAME \
-        --source-disk $BUILD_VM \
-        --source-disk-zone $ZONE \
-        --family $CUSTOM_IMAGE_FAMILY \
-        --project $PROJECT_ID
-    echo "[SUCCESS] Image created: $CUSTOM_IMAGE_NAME"
+    gcloud compute images create "${CUSTOM_IMAGE_NAME}" \
+        --source-disk "${BUILD_VM}" \
+        --source-disk-zone "${ZONE}" \
+        --family "${CUSTOM_IMAGE_FAMILY}" \
+        --project "${PROJECT_ID}"
+    echo "[SUCCESS] Image created: ${CUSTOM_IMAGE_NAME}"
 
     echo "Deleting temporary VM..."
-    gcloud compute instances delete $BUILD_VM --project $PROJECT_ID --zone $ZONE
+    gcloud compute instances delete "${BUILD_VM}" --project "${PROJECT_ID}" --zone "${ZONE}" --quiet
     echo "[SUCCESS] Temporary VM deleted."
     
     echo "Image build complete."
@@ -112,31 +112,31 @@ function provision_infra() {
 function bootstrap_cluster() {
     echo "--- Bootstrapping Cluster ---"
     
-    echo "Uploading scripts to Control Plane ($CONTROL_PLANE_NAME)..."
-    gcloud compute scp config.env bootstrap_cp.sh $CONTROL_PLANE_NAME:~/ --project $PROJECT_ID --zone $ZONE
+    echo "Uploading scripts to Control Plane (${CONTROL_PLANE_NAME})..."
+    gcloud compute scp config.env bootstrap_cp.sh "${CONTROL_PLANE_NAME}:~/" --project "${PROJECT_ID}" --zone "${ZONE}"
     echo "[SUCCESS] Scripts uploaded to Control Plane."
 
     echo "Running Control Plane bootstrap..."
-    gcloud compute ssh $CONTROL_PLANE_NAME --project $PROJECT_ID --zone $ZONE --command "chmod +x bootstrap_cp.sh && ./bootstrap_cp.sh"
+    gcloud compute ssh "${CONTROL_PLANE_NAME}" --project "${PROJECT_ID}" --zone "${ZONE}" --command "chmod +x bootstrap_cp.sh && ./bootstrap_cp.sh"
     echo "[SUCCESS] Control Plane bootstrapped."
 
     # Extract Join Command
     echo "Extracting Join Command..."
-    JOIN_CMD=$(gcloud compute ssh $CONTROL_PLANE_NAME --project $PROJECT_ID --zone $ZONE --command "kubeadm token create --print-join-command")
+    JOIN_CMD=$(gcloud compute ssh "${CONTROL_PLANE_NAME}" --project "${PROJECT_ID}" --zone "${ZONE}" --command "kubeadm token create --print-join-command")
     
-    if [ -z "$JOIN_CMD" ]; then
+    if [[ -z "${JOIN_CMD}" ]]; then
         echo "Error: Failed to get join command."
         exit 1
     fi
     
-    echo "Join Command: $JOIN_CMD"
+    echo "Join Command: ${JOIN_CMD}"
 
     # Join Workers
-    for (( i=0; i<$WORKER_COUNT; i++ )); do
+    for (( i=0; i<${WORKER_COUNT}; i++ )); do
         WORKER="${WORKER_NAME_PREFIX}-${i}"
-        echo "Joining Worker: $WORKER..."
-        gcloud compute ssh $WORKER --project $PROJECT_ID --zone $ZONE --command "sudo $JOIN_CMD"
-        echo "[SUCCESS] Worker $WORKER joined."
+        echo "Joining Worker: ${WORKER}..."
+        gcloud compute ssh "${WORKER}" --project "${PROJECT_ID}" --zone "${ZONE}" --command "sudo ${JOIN_CMD}"
+        echo "[SUCCESS] Worker ${WORKER} joined."
     done
     
     echo "Cluster bootstrapping complete."
@@ -149,28 +149,28 @@ function validate_cluster() {
 
 function destroy_cluster() {
     echo "--- Destroying Cluster ---"
-    read -p "Are you sure? This will delete VMs and Network. (y/N): " CONFIRM
+    IFS= read -r -p "Are you sure? This will delete VMs and Network. (y/N): " CONFIRM
     if [[ "$CONFIRM" != "y" ]]; then
         echo "Aborted."
         return
     fi
     
     echo "Deleting VMs..."
-    gcloud compute instances delete $CONTROL_PLANE_NAME --project $PROJECT_ID --zone $ZONE --quiet || true
-    for (( i=0; i<$WORKER_COUNT; i++ )); do
-        gcloud compute instances delete "${WORKER_NAME_PREFIX}-${i}" --project $PROJECT_ID --zone $ZONE --quiet || true
+    gcloud compute instances delete "${CONTROL_PLANE_NAME}" --project "${PROJECT_ID}" --zone "${ZONE}" --quiet || true
+    for (( i=0; i<${WORKER_COUNT}; i++ )); do
+        gcloud compute instances delete "${WORKER_NAME_PREFIX}-${i}" --project "${PROJECT_ID}" --zone "${ZONE}" --quiet || true
     done
     
     echo "Deleting Firewall Rules..."
-    gcloud compute firewall-rules delete ${NETWORK_NAME}-allow-internal --project $PROJECT_ID --quiet || true
-    gcloud compute firewall-rules delete ${NETWORK_NAME}-allow-ssh --project $PROJECT_ID --quiet || true
-    gcloud compute firewall-rules delete ${NETWORK_NAME}-allow-k8s-api --project $PROJECT_ID --quiet || true
+    gcloud compute firewall-rules delete "${NETWORK_NAME}-allow-internal" --project "${PROJECT_ID}" --quiet || true
+    gcloud compute firewall-rules delete "${NETWORK_NAME}-allow-ssh" --project "${PROJECT_ID}" --quiet || true
+    gcloud compute firewall-rules delete "${NETWORK_NAME}-allow-k8s-api" --project "${PROJECT_ID}" --quiet || true
 
     echo "Deleting Subnet..."
-    gcloud compute networks subnets delete $SUBNET_NAME --project $PROJECT_ID --region $REGION --quiet || true
+    gcloud compute networks subnets delete "${SUBNET_NAME}" --project "${PROJECT_ID}" --region "${REGION}" --quiet || true
     
     echo "Deleting Network..."
-    gcloud compute networks delete $NETWORK_NAME --project $PROJECT_ID --quiet || true
+    gcloud compute networks delete "${NETWORK_NAME}" --project "${PROJECT_ID}" --quiet || true
     
     echo "Cluster destroyed."
 }
@@ -178,7 +178,7 @@ function destroy_cluster() {
 # Main Loop
 while true; do
     show_menu
-    read -p "Enter choice [1-6]: " CHOICE
+    IFS= read -r -p "Enter choice [1-6]: " CHOICE
     case $CHOICE in
         1) build_image ;;
         2) provision_infra ;;
